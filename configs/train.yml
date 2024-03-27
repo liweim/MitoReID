@@ -1,0 +1,49 @@
+model:
+  resume_path: 'result/resnet-50-kinetics.pth'
+  resume: 0
+  arch: 'resnet50'
+  freeze: 0
+  loss: 'id+trihard'
+  bnneck: 1
+  downscale_temporal_dimension: 0
+  device_ids: '0'
+
+input:
+  train_path: 'data/Mito/l1/train,data/Mito/l2/train,data/Mito/l3/train'
+  query_path: 'data/Mito/l1/query,data/Mito/l2/query,data/Mito/l3/query'
+  gallery_path: 'data/Mito/l1/gallery,data/Mito/l2/gallery,data/Mito/l3/gallery'
+  target_path: 'data/Mito/annotation.xlsx'
+  type: 'rgb'
+  id_col: 'moa_id'
+  choose_col: 'moa_choose'
+  num_classes: 38
+  num_timepoint: 16
+  sample_rate: 1
+  input_size: 112
+  sample_size: 128
+  num_instances: 4
+  augment: 1
+  num_workers: 16
+  mean: [ 0.023, 0.060, 0.015 ]
+  std: [ 0.042, 0.128, 0.032 ]
+
+output:
+  model_path: 'result/mitoreid-resnet-50-new.pth'
+  feature_path: ''
+  predict_path: ''
+
+solver:
+  epoch: 300
+  warmup_epoch: 100
+  lr: 0.001
+  center_lr: 0.05
+  weight: 0.01
+  margin: 0.3
+  smooth_epsilon: 0.1
+  num_mislabel: 5
+  bs: 128
+  tol: 30
+  lr_patience: 3
+  val_period: 4
+  optimizer: 'sgd'
+  scheduler: 'adapt'
