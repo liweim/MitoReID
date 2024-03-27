@@ -170,6 +170,10 @@ can move forward.
 - mitoreid-resnet-50-pretrain: weight trained with MitoReID framework with modified I3D ResNet-50 network on Mito
   dataset,
   pretrained from resnet-50-mito.
+
+  Note: the model weights provided are trained with multiple GPUs. I have tried my laptop with single GPU and not work,
+  in this case, you can set the `device_ids` to 'cpu' in `configs/test.yml`. If you get GPU out-of-memory error, set
+  the `bs` to a lower value. If you get CPU out-of-memory error, set the `num_workers` to a lower value.
    ```
    python main.py --config configs/test.yml --task test
    ```

@@ -5,7 +5,7 @@ from utils.data_loader import CellDataset
 import torch.backends.cudnn as cudnn
 from torch.optim import lr_scheduler
 from utils.spatial_transforms import *
-from models.resnet import *
+from models.resnet import mult_gpu_to_single, is_multi_gpu, resnet18, resnet50, resnet101
 from models.resnext import *
 from train import train
 from val import val
@@ -59,7 +59,7 @@ class MitoReID():
 
                 device_ids: str (optional, default '0')
                     device ids
-                    ''=use cpu; '0'=use 'cuda:0'; '0,1'=use 'cuda:0' and 'cuda:1'
+                    'cpu'=use cpu; '0'=use 'cuda:0'; '0,1'=use 'cuda:0' and 'cuda:1'
 
             input:
                 train_path: str (required)
@@ -233,7 +233,7 @@ class MitoReID():
                 download_file(name, save_folder)
 
     def load_model(self):
-        if self.device_ids != "" and torch.cuda.is_available():
+        if self.device_ids != "cpu" and torch.cuda.is_available():
             use_gpu = True
             device_ids = [int(id) for id in self.device_ids.split(",")]
             os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
@@ -295,8 +295,11 @@ class MitoReID():
 
         if self.resume_path:
             self.logger.info('resumed model {}'.format(self.resume_path))
-            self.checkpoint = torch.load(self.resume_path)
-            model.load_state_dict(self.checkpoint['state_dict'], strict=True)
+            self.checkpoint = torch.load(self.resume_path, map_location=self.device)
+            state_dict = self.checkpoint['state_dict']
+            if self.device_ids == "cpu" and is_multi_gpu(state_dict):
+                state_dict = mult_gpu_to_single(state_dict)
+            model.load_state_dict(state_dict, strict=True)
         else:
             self.logger.info('pretrained model {}'.format(pretrain_path))
         return model
@@ -544,8 +547,8 @@ def run(mito, task):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', default='configs/train.yml', type=str)
-    parser.add_argument('--task', default='train', type=str)
+    parser.add_argument('--config', default='configs/test.yml', type=str)
+    parser.add_argument('--task', default='test', type=str)
     args = parser.parse_args()
     mito = MitoReID(args.config)
 
