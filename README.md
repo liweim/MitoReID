@@ -34,7 +34,7 @@ MitoReID, trained on 38 MOA classes.
 
 ![T-SNE plot](./misc/tsne.png)
 
-### Methods comparison in identifying 37 MOAs based on temporal mitochondrial phenotypes
+### Methods comparison in identifying 38 MOAs based on temporal mitochondrial phenotypes
 
 |     Methods     | Accuracy/% | AUC/% | Rank-1/% | Rank-5/% | Rank-10/% | mAP/% | 
 |:---------------:|:----------:|:-----:|:--------:|:--------:|:---------:|:-----:|
