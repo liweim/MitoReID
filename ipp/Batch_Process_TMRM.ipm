@@ -1,0 +1,334 @@
+Option Explicit
+Attribute VB_Name = "Module1"
+
+'**********************************************************************
+' Filename:   Batch_Process.ipm
+' Copyright Media Cybernetics, Inc. 2004
+'
+' Free for use as demonstration code.
+'
+'----------------------------------------------------------------------
+' PROBLEM SOLVED:
+'
+' Process images as a batch. The two top level functions support either
+' processing all images in a directory, or all open images. 
+'
+' To use, take the ProcessDirectory or ProcessOpenDocs macros, and 
+' replace the setup, process, and finish calls with your own macros. 
+' These are marked with '***' in the processing macros.
+'
+' Open images are processed in order of their document ID, which is 
+' the order in which they were opened or created. 
+' 
+' Note that processing a directory of images will process in alphabetic
+' order. Use IpStAutoName( ) or the Capture multiple image to file 
+' commands to generate images with names that order with their capture
+' or generation time.
+'
+' If you wish to reorder the image names, it would be necessary to 
+' read the directory twice: once to find out how many images there were, 
+' ReDim an array to hold the image names, and a second read to put the
+' names into the array. Then that array could be sorted as desired, 
+' based on however the image names were originally generated. 
+'
+' The ProcessDirectory example is fairly simple; the ProcessOpenDocs
+' example does some Count/Size processing, accumulating results in the
+' Data Collector, and is a much more comprehensive example. 
+'
+' ProcessSubDir, added in version 2.0, is similar to ProcessDirectory, 
+' but recursively travels the subdirectories under the starting 
+' location. 
+'
+' Try ProcessOpenDocs with Nodules1.tif, Nodules2.tif, Slide.tif, and 
+' Spots.tif open. 
+'----------------------------------------------------------------------
+' WHO WOULD USE THIS:
+'
+' Users and macro writers who wish to batch process multiple images.
+'----------------------------------------------------------------------
+' SYSTEM REQUIREMENTS:
+'
+' IPP or related product, version 4.x or higher
+'----------------------------------------------------------------------
+'HISTORY OF CHANGES:
+'Macro Version:    2.0
+'Created:          10/28/02
+'Modified:         10/28/02
+'Author:           K. Ryan
+'Application:      IPWin
+'Version:          4.x
+'Change History:
+'     1.0:		10/28/02	KR	Created
+'     2.0:		10/28/02	KR	Added recursive directory processing
+'**********************************************************************
+
+
+' Global directory starting string, for saving where we last processed
+Dim gDirStart As String
+
+Sub ProcessMultiDirectories()
+' Clear the output for work purposes
+    DebugClear
+    ret = IpOutputClear()
+	' Close all open images
+	ret = IpAppCloseAll()
+
+	' Get a file name in the desired directory
+	Dim workStr As String
+	workStr = GetFilePath("", "*", gDirStart, _
+       "Select a file in the desired directory", 0)
+
+	Dim X As Integer
+	Dim DStat As Integer
+	Dim IName As String * 255
+	Dim folder As String
+	Dim shortName As String
+	Dim docID As Integer
+	Dim startStr As String
+	Dim savePath As String
+	startStr = "H:\Extract features\new\294\"
+
+	' Search through all files in the directory
+	X = 0
+	DStat = IpStSearchDir(startStr, "*", X, IName)
+
+	Do While DStat > 0
+		X = X + 1
+
+		If DStat = 2 Then
+			shortName = Right(IpTrim(IName), 2)
+			If shortName <> "\." And shortName <> ".." Then
+				folder = IpTrim(IName)
+				Debug.Print "Processing folder: "; folder
+
+				' Extract the directory name from the full file name
+			    gDirStart = folder+"\w2\"
+				savePath = folder+"\w2.xls"
+				run gDirStart,savePath,20
+
+				gDirStart = folder+"\w3\"
+				savePath = folder+"\w3.xls"
+				run gDirStart,savePath,20
+			End If
+		End If
+
+		' Next file
+		DStat = IpStSearchDir(startStr, "*.*", X, IName)
+	Loop
+
+
+    ' Let the user know that we've finished
+   	ret = IpMacroStop("All images in directory processed.", MS_MODAL)
+End Sub
+
+Sub ProcessOneDirectory()
+' Clear the output for work purposes
+    DebugClear
+    ret = IpOutputClear()
+	' Close all open images
+	ret = IpAppCloseAll()
+
+	' Get a file name in the desired directory
+	Dim workStr As String
+	workStr = GetFilePath("", "*", gDirStart, _
+       "Select a file in the desired directory", 0)
+
+	Dim X As Integer
+	Dim DStat As Integer
+	Dim IName As String * 255
+	Dim folder As String
+	Dim shortName As String
+	Dim docID As Integer
+	Dim startStr As String
+	Dim savePath As String
+	gDirStart = Left(workStr, InStrRev(workStr, "\")-1)
+
+	savePath = gDirStart+".xls"
+	run gDirStart+"\",savePath,20
+
+
+    ' Let the user know that we've finished
+   	ret = IpMacroStop("All images in directory processed.", MS_MODAL)
+End Sub
+
+
+Private Sub run(gDirStart As String, savePath As String, thres As Integer)
+	Debug.Print "Processing subfolder: "; gDirStart
+
+' Scan through and process all files in a directory
+	Dim IName As String*255
+	Dim fName As String
+	Dim workStr As String
+
+    fName = Dir(gDirStart + "*.*", 32)
+
+    While fName <> ""
+    	Debug.Print fName
+
+		run_module gDirStart, fName, savePath, 20
+
+	    ' Get the next file name
+	    fName = Dir()
+    Wend
+
+
+
+End Sub
+
+Private Sub run_module(gDirStart As String, fName As String, savePath As String, thres As Integer)
+		Dim docID As Integer
+	' Print out the file name and its attributes
+	    'Debug.Print GetAttr(gDirStart + fName); " "; fName
+
+	    ' Load the image
+	    docID = IpWsLoad(gDirStart + fName, "")
+	    ' Call processing routine here ***
+		' The document ID and file name are sent here
+		' in case the processing routine needs them.
+
+	    ret = IpFltExtractBkgnd(1, 140)
+		'select the RAW sequence
+		ret = IpAppSelectDoc(0)
+		'Substract the BG from the RAW to generate the COR
+		ret = IpOpImageArithmetics(1, 0.0, OPA_SUB, 0)
+		'Duplicate the COR seqeunce
+		ret = IpWsDuplicate()
+		'Apply a TOPHAT filter: 7x7, 1passage, strenght=10
+		ret = IpFltConvolveKernel("TOPHAT.7x7", 10, 1)
+		'Apply a MEDIAN filter: 3X3, 6passages
+		ret = IpFltMedian(3, 6)
+		'Specify the the threshold intensity based
+		ret = IpSegSetRange(0, thres, 255)
+		'Apply the threshold to create a BIN sequence
+		ret = IpSegCreateMask(5, 0, 1)
+		'Select the COR sequence
+		ret = IpAppSelectDoc(0)
+		'Logical operation: COR AND BIN to generate the MSK
+		ret = IpOpImageLogic(2, OPL_AND, 0)
+		'Select the MSK sequence
+		ret = IpAppSelectDoc(0)
+		'Do the best fit
+		ret = IpDrSet(DR_BEST, 0, IPNULL)
+		'Select the BG sequence
+		ret = IpAppSelectDoc(1)
+		'Close the COR sequence
+		ret = IpDocClose()
+
+
+
+		'Specify the modality how to save the data
+		ret = IpDde(DDE_SET, "row", "1")
+		ret = IpDde(DDE_SET, "col", "1")
+		ret = IpDde(DDE_SET, "append", "2")
+
+	    'Specify the descriptors you want to extract
+		ret = IpBlbEnableMeas(BLBM_ALL, 1)
+		'Specify the count/size options
+		ret = IpBlbSetAttr(BLOB_AUTORANGE, 0)
+		ret = IpSegSetRange(0, 1, 255)
+		ret = IpBlbSetAttr(BLOB_8CONNECT,1)
+		ret = IpBlbSetAttr(BLOB_MEASUREOBJECTS, 1)
+		ret = IpBlbSetAttr(BLOB_OUTLINEMODE,2)
+		ret = IpBlbSetAttr(BLOB_CLEANBORDER,0)
+		ret = IpBlbSetAttr(BLOB_FILTEROBJECTS, 0)
+		ret = IpBlbSetAttr(BLOB_LABELMODE,0)
+		'Measure the descriptors
+		ret = IpBlbCount()
+		'Export the data in a .cnt file with a specified name and in a specifified directory
+		ret = IpBlbSaveData(savePath,  S_APPEND+S_STATS+S_HEADER+S_X_AXIS+S_Y_AXIS)
+		'Delete the previous measurement
+		ret = IpBlbDelete()
+		'Specify the descriptors you want to extract
+		ret = IpBlbEnableMeas(BLBM_ALL, 0)
+		ret = IpBlbEnableMeas(BLBM_ROUNDNESS, 1)
+		ret = IpBlbCount()
+		'Export the data in a .cnt file with a specified name and in a specifified directory
+		ret = IpBlbSaveData(savePath,  S_APPEND+S_STATS+S_HEADER+S_X_AXIS+S_Y_AXIS)
+		'Delete the previous measurement
+		ret = IpBlbDelete()
+		ret = IpSeqPlay(SEQ_NEXT)
+
+	    ' Close all open images
+		ret = IpAppCloseAll()
+End Sub
+
+Sub TMRM
+	'Specify the variables to create a loop that will process all the images in the sequence
+	Dim path As String
+	path = "H:\Extract features\tmp.cnt"
+	Dim numfr As Integer
+	Dim i As Integer
+
+	' Generate the BG from the RAW using the Rolling Ball filter [background=Dark, Feature width (radius) = 140]
+	ret = IpFltExtractBkgnd(1, 140)
+	'select the RAW sequence
+	ret = IpAppSelectDoc(0)
+	'Substract the BG from the RAW to generate the COR
+	ret = IpOpImageArithmetics(1, 0.0, OPA_SUB, 0)
+	'Duplicate the COR seqeunce
+	ret = IpWsDuplicate()
+	'Apply a TOPHAT filter: 7x7, 1passage, strenght=10
+	ret = IpFltConvolveKernel("TOPHAT.7x7", 10, 1)
+	'Apply a MEDIAN filter: 3X3, 6passages
+	ret = IpFltMedian(3, 6)
+	'Specify the the threshold intensity based
+	ret = IpSegSetRange(0, 10, 255)
+	'Apply the threshold to create a BIN sequence
+	ret = IpSegCreateMask(5, 0, 1)
+	'Select the COR sequence
+	ret = IpAppSelectDoc(0)
+	'Logical operation: COR AND BIN to generate the MSK
+	ret = IpOpImageLogic(2, OPL_AND, 0)
+	'Select the MSK sequence
+	ret = IpAppSelectDoc(0)
+	'Do the best fit
+	ret = IpDrSet(DR_BEST, 0, IPNULL)
+
+
+	'Select the WS sequence
+	ret = IpAppSelectDoc(0)
+	'Get number of frames in sequence
+	ret=IpSeqGet(SEQ_NUMFRAMES,numfr)
+	'Go to the first frame
+	ret = IpSeqSet(SEQ_ACTIVEFRAME, 0)
+	'Specify the modality how to save the data
+	ret = IpDde(DDE_SET, "row", "1")
+	ret = IpDde(DDE_SET, "col", "1")
+	ret = IpDde(DDE_SET, "append", "2")
+
+	'Start the loop
+	For i=0 To numfr-1
+
+	    'Specify the descriptors you want to extract
+		ret = IpBlbEnableMeas(BLBM_ALL, 1)
+		'Specify the count/size options
+		ret = IpBlbSetAttr(BLOB_AUTORANGE, 0)
+		ret = IpSegSetRange(0, 1, 255)
+		ret = IpBlbSetAttr(BLOB_8CONNECT,1)
+		ret = IpBlbSetAttr(BLOB_MEASUREOBJECTS, 1)
+		ret = IpBlbSetAttr(BLOB_OUTLINEMODE,2)
+		ret = IpBlbSetAttr(BLOB_CLEANBORDER,0)
+		ret = IpBlbSetAttr(BLOB_FILTEROBJECTS, 0)
+		ret = IpBlbSetAttr(BLOB_LABELMODE,0)
+		'Measure the descriptors
+		ret = IpBlbCount()
+		'Export the data in a .cnt file with a specified name and in a specifified directory
+		ret = IpBlbSaveData(path,  S_APPEND+S_STATS+S_HEADER+S_X_AXIS+S_Y_AXIS)
+		'Delete the previous measurement
+		ret = IpBlbDelete()
+		'Specify the descriptors you want to extract
+		ret = IpBlbEnableMeas(BLBM_ALL, 0)
+		ret = IpBlbEnableMeas(BLBM_ROUNDNESS, 1)
+		ret = IpBlbCount()
+		'Export the data in a .cnt file with a specified name and in a specifified directory
+		ret = IpBlbSaveData(path,  S_APPEND+S_STATS+S_HEADER+S_X_AXIS+S_Y_AXIS)
+		'Delete the previous measurement
+		ret = IpBlbDelete()
+		ret = IpSeqPlay(SEQ_NEXT)
+		'Go to the next image within the sequence
+
+	'Start the loop again
+	Next i
+
+
+End Sub
