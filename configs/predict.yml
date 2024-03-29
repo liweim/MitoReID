@@ -23,7 +23,7 @@ input:
   sample_size: 128
   num_instances: 4
   augment: 1
-  num_workers: 16
+  num_workers: 1
   mean: [ 0.023, 0.060, 0.015 ]
   std: [ 0.042, 0.128, 0.032 ]
 
@@ -41,7 +41,7 @@ solver:
   margin: 0.3
   smooth_epsilon: 0.1
   num_mislabel: 5
-  bs: 128
+  bs: 16
   tol: 30
   lr_patience: 3
   val_period: 2

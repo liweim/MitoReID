@@ -56,7 +56,7 @@ MitoReID, trained on 38 MOA classes.
 
 ### Hardware requirements
 
-This project requires a computer with at least 16GB GPU memory for training and 12GB GPU memory for inference. All the
+This project requires a computer with at least 16GB GPU memory for training and 3GB GPU memory for inference. All the
 models present in the paper were trained with Nvidia V100 (32 GB version).
 
 ### Software requirements
@@ -172,8 +172,7 @@ can move forward.
   pretrained from resnet-50-mito.
 
   Note: the model weights provided are trained with multiple GPUs. I have tried my laptop with single GPU and not work,
-  in this case, you can set the `device_ids` to 'cpu' in `configs/test.yml`. If you get GPU out-of-memory error, set
-  the `bs` to a lower value. If you get CPU out-of-memory error, set the `num_workers` to a lower value.
+  in this case, you can set the `device_ids` to 'cpu' in `configs/test.yml`.
    ```
    python main.py --config configs/test.yml --task test
    ```
@@ -188,7 +187,8 @@ can move forward.
 7. Fine-tune your model based on the self-supervised pretrained weight. Configurations can be refered
    to `configs/fine-tune.yml`. The pretrained weight `resnet-50-mito` will be downloaded automatically.
    Train on V100 will take about 1 hour. Wandb is used to visualize the training process, register the wandb account
-   in `https://wandb.ai/site` if you don't have.
+   in `https://wandb.ai/site` if you don't have. If you get GPU out-of-memory error, set
+   the `bs` to a lower value. If you get CPU out-of-memory error, set the `num_workers` to a lower value.
    ```
    python main.py --config configs/fine-tune.yml --task train
    ```
@@ -199,7 +199,7 @@ can move forward.
    Train on V100 will take about 4 hours.
 
    Note: Train from scratch is not recommended considering the difficulty of image
-   sequences classification. Too much training may led to overfitting, don't set too large `epoch` in the config.
+   sequences classification. Too much training may lead to overfitting, don't set too large `epoch` in the config.
    ```
    python main.py --config configs/pretrain.yml --task train
    ```

@@ -108,7 +108,7 @@ class MitoReID():
                 augment: bool (optional, default 1)
                     whether to augment the data
 
-                num_workers: int (optional, default 16)
+                num_workers: int (optional, default 1)
                     Number of threads in data loader
 
                 mean: list (optional, default for type 'rgb' [0.067, 0.102, 0.024], default for type 'flow' [0, 0.498, 0.491])
