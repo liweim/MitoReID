@@ -59,11 +59,27 @@ def predict(target_path, model, save_path, queryloader, galleryloader, device, i
     target_df = pd.read_excel(target_path, sheet_name="FDA-list")
     target_df["index"] = target_df["index"].astype(str)
 
+    groups = df.groupby('pid')# 需要删除
+    count = 0
+    for id, data in groups:
+        top5 = list(data['pred'][:5])
+
+        drug_id = str(id)
+        if '-' in drug_id:
+            drug_id = drug_id.split('-')[0]
+        vals = target_df[target_df['index'] == drug_id]['moa_id'].values
+        if len(vals) > 0:
+            val = str(vals[0])
+            if val in top5:
+                count += 1
+                logger.info(f'correct: {id}, rank: {top5.index(val) + 1}')
+    logger.info(f'num of correct: {count}')
+
     nc_target_df = pd.read_excel(target_path, sheet_name="Novel-list")
     # nc_target_df = target_df
     df["pid"] = df["pid"].astype(str)
     nc_target_df["index"] = nc_target_df["index"].astype(str)
-    df = pd.merge(df, nc_target_df[["index", "name"]], left_on="pid", right_on="index")
+    df = pd.merge(df, nc_target_df[["index", "name", "cas"]], left_on="pid", right_on="index")
 
     if id_col == "drug_id":
         target_df["index"] = target_df["index"].astype(str)
@@ -82,3 +98,42 @@ def predict(target_path, model, save_path, queryloader, galleryloader, device, i
         logger.info('save result to ' + save_path)
     else:
         logger.info('no result to save')
+
+
+if __name__ == "__main__":
+    # 需要删掉
+    target_df = pd.read_excel('utils/annotation.xlsx', sheet_name="FDA-list")
+    target_df["index"] = target_df["index"].astype(str)
+
+    path = 'predict/mitosnet_resnet50_pretrain_38_kinetics-nc.xlsx'
+    df = pd.read_excel(path)
+    groups = df.groupby('pid')
+    freq_count = {}
+    for id, data in groups:
+        top3 = list(data['pred'][:3])
+        for top in top3:
+            if top not in freq_count:
+                freq_count[top] = 0
+            freq_count[top] += 1
+    freq_count = sorted(freq_count.items(), key=lambda kv: kv[1], reverse=True)
+    freq_id = [id for id, count in freq_count[:10]]
+
+    filtered_df = pd.DataFrame()
+    select_num = 0
+    for id, data in groups:
+        if random.random() < 0.05:
+            filtered_df = pd.concat([filtered_df, data])
+            select_num += 1
+        else:
+            top5 = list(data['pred'][:5])
+            count = 0
+            for top in top5:
+                if top in freq_id:
+                    count += 1
+            if count < 4 or len(top5) < 5:
+                filtered_df = pd.concat([filtered_df, data])
+                select_num += 1
+    filtered_df = filtered_df.sort_values(by=['pid', 'rank1', 'cosine_distance'], ascending=[True, False, True])
+    print(filtered_df)
+    print('select', select_num)
+    filtered_df.to_excel(path.replace('.xlsx', '_select.xlsx'), index=None)
