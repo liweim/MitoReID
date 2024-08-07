@@ -19,7 +19,7 @@ import argparse
 CHUNK_SIZE = 512 * 1024  # 512KB
 home = osp.expanduser("~")
 name2id = {
-    'Mito.zip': '1udT62nnHXrjowjuJQT4BBefHgmTyvSI7',
+    'Mito.zip': '1_GHrxZFUsG7NeSLDRn9M3nv2iCSY5rXk',
     'resnet-18-kinetics.pth': '1jOsaPJw9Qcu5uEqmkZYhdozsOVTJkUjs',
     'ide.pth': '1dHJ92huqqiW2YCT51JMGRzN43QSq9KtD',
     'resnet-18-mito.pth': '1QgBON_t8WnThfrio5uvp4InJHkZoeSTL',
